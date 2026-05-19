@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>虎鲸咨询 · 小红书图文工具</title>
+    <style>
+        :root {
+            --bg: #faf8f6;
+            --surface: #ffffff;
+            --text-1: #1a1a1a;
+            --text-2: #666666;
+            --text-3: #999999;
+            --accent: #e8635a;
+            --accent-hover: #d4524a;
+            --accent-light: #fdf0ee;
+            --border: #eee8e3;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+            background: var(--bg);
+            color: var(--text-1);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header-logo { font-size: 26px; }
+        .header-title { font-size: 16px; font-weight: 700; }
+        .header-sub { font-size: 12px; color: var(--text-3); }
+
+        /* Main */
+        .main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 24px 64px;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 36px;
+            align-items: start;
+        }
+
+        /* Panel */
+        .panel {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow);
+        }
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 14px;
+        }
+
+        /* Upload */
+        .image-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+        .upload-box {
+            border: 1.5px dashed var(--border);
+            border-radius: var(--radius-md);
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-box:hover { border-color: var(--accent); background: var(--accent-light); }
+        .upload-box.has-image { border-style: solid; padding: 0; }
+        .upload-icon { font-size: 28px; margin-bottom: 6px; opacity: 0.5; }
+        .upload-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+        .upload-desc { font-size: 11px; color: var(--text-3); }
+        .upload-preview-img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: none; border-radius: calc(var(--radius-md) - 2px); }
+        .upload-preview-img.show { display: block; }
+        .upload-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; }
+        .upload-placeholder.hide { display: none; }
+        .change-image-btn {
+            position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.6); color: white; font-size: 11px;
+            padding: 5px 12px; border-radius: 20px; opacity: 0;
+            transition: opacity 0.2s; cursor: pointer;
+        }
+        .upload-box:hover .change-image-btn { opacity: 1; }
+        .cover-note { font-size: 10px; color: var(--accent); margin-top: 6px; font-weight: 500; }
+
+        /* Filter */
+        .filter-presets { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-btn {
+            padding: 6px 14px; border: 1.5px solid var(--border); border-radius: 20px;
+            font-size: 12px; background: var(--surface); cursor: pointer;
+            transition: all 0.15s; color: var(--text-2);
+        }
+        .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+        .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+        /* Form */
+        .form-group { margin-bottom: 18px; }
+        .form-label { font-size: 13px; font-weight: 600; color: var(--text-1); margin-bottom: 6px; display: block; }
+        .form-hint { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
+        input[type="text"], textarea {
+            width: 100%; padding: 11px 14px;
+            border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+            font-size: 14px; font-family: inherit; color: var(--text-1);
+            background: var(--surface); transition: border-color 0.15s;
+            outline: none; line-height: 1.5;
+        }
+        input:focus, textarea:focus { border-color: var(--accent); }
+        input::placeholder, textarea::placeholder { color: var(--text-3); }
+        textarea { min-height: 80px; resize: vertical; }
+
+        /* Tags */
+        .tag-input-wrap { position: relative; }
+        .hot-topics-btn {
+            position: absolute; right: 8px; top: 8px;
+            background: var(--accent-light); color: var(--accent); border: none;
+            padding: 4px 10px; border-radius: 12px; font-size: 11px;
+            font-weight: 600; cursor: pointer; transition: all 0.15s;
+        }
+        .hot-topics-btn:hover { background: var(--accent); color: white; }
+        .hot-topics-panel {
+            display: none; background: #fff9f5; border: 1px solid #fde4d8;
+            border-radius: var(--radius-md); padding: 14px; margin-top: 10px;
+        }
+        .hot-topics-panel.show { display: block; }
+        .hot-topics-title { font-size: 11px; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+        .hot-topics-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .hot-topic-tag {
+            background: white; border: 1px solid #fde4d8; padding: 5px 10px;
+            border-radius: 14px; font-size: 11px; color: var(--text-2);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .hot-topic-tag:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        .hot-topic-tag.selected { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* Status bar */
+        .status-bar {
+            padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px;
+            margin-bottom: 12px; display: none;
+        }
+        .status-bar.show { display: block; }
+        .status-bar.loading { background: #fef9e7; color: #d48806; }
+        .status-bar.success { background: #edf7ed; color: #2e7d32; }
+        .status-bar.error { background: var(--accent-light); color: var(--accent); }
+
+        /* Buttons */
+        .btn-generate {
+            width: 100%; padding: 14px; background: var(--accent); color: #fff;
+            border: none; border-radius: var(--radius-md); font-size: 15px;
+            font-weight: 700; font-family: inherit; cursor: pointer;
+            transition: background 0.15s; margin-top: 8px;
+        }
+        .btn-generate:hover { background: var(--accent-hover); }
+        .btn-generate:disabled { background: var(--text-3); cursor: not-allowed; }
+
+        .btn-submit {
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg, #52c41a, #389e0d);
+            color: #fff; border: none; border-radius: var(--radius-md);
+            font-size: 15px; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: all 0.15s; margin-top: 10px;
+        }
+        .btn-submit:hover { background: linear-gradient(135deg, #73d13d, #52c41a); }
+        .btn-submit:disabled { background: #b7b7b7; cursor: not-allowed; }
+
+        /* Right panel */
+        .preview-panel { position: sticky; top: 80px; }
+        .preview-label {
+            font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+            text-transform: uppercase; color: var(--text-3);
+            text-align: center; margin-bottom: 14px;
+        }
+
+        /* Phone frame */
+        .phone-frame {
+            background: #1a1a1a; border-radius: 36px; padding: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.05);
+        }
+        .phone-notch {
+            width: 50px; height: 18px; background: #1a1a1a;
+            border-radius: 0 0 14px 14px; margin: 0 auto; position: relative; z-index: 2;
+        }
+        .phone-screen {
+            background: #fff; border-radius: 26px; overflow: hidden;
+            height: 560px; display: flex; flex-direction: column;
+        }
+
+        /* XHS Post */
+        .xhs-post { display: flex; flex-direction: column; height: 100%; }
+        .post-header { padding: 11px 14px 9px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .post-avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: linear-gradient(135deg, #e8635a, #f5a49c);
+            display: flex; align-items: center; justify-content: center; font-size: 12px;
+        }
+        .post-user-info { flex: 1; min-width: 0; }
+        .post-username { font-size: 12px; font-weight: 700; color: #333; }
+        .post-follow { font-size: 10px; color: #e8635a; font-weight: 600; margin-top: 1px; }
+        .post-more { color: #ccc; font-size: 16px; padding: 2px 6px; }
+
+        .post-carousel { position: relative; flex: 1; min-height: 0; background: #f5f5f5; }
+        .post-carousel-img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .post-carousel-img.active { display: block; }
+        .carousel-dots {
+            position: absolute; bottom: 10px; left: 0; right: 0;
+            display: flex; justify-content: center; gap: 5px;
+        }
+        .carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5); }
+        .carousel-dot.active { background: white; }
+        .img-count-badge {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.45); color: white; font-size: 10px;
+            padding: 3px 8px; border-radius: 10px; display: none;
+        }
+        .img-count-badge.show { display: block; }
+
+        .post-actions { padding: 10px 14px 14px; flex-shrink: 0; }
+        .post-title { font-size: 14px; font-weight: 700; color: #222; line-height: 1.4; margin-bottom: 6px; }
+        .post-content { font-size: 12px; color: #555; line-height: 1.6; margin-bottom: 10px;
+            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .post-tags { font-size: 11px; color: #e8635a; margin-bottom: 10px;
+            display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .action-row { display: flex; align-items: center; gap: 16px; border-top: 1px solid #f0f0f0; padding-top: 10px; }
+        .action-item { display: flex; align-items: center; gap: 4px; color: #999; font-size: 11px; }
+        .action-icon { font-size: 18px; }
+        .action-item.save { margin-left: auto; color: #f5a040; }
+
+        /* Info box */
+        .info-box {
+            margin-top: 16px; background: #f0f9ff; border: 1px solid #bae0ff;
+            border-radius: var(--radius-md); padding: 14px;
+        }
+        .info-box-title { font-size: 12px; font-weight: 700; color: #0958d9; margin-bottom: 8px; }
+        .info-box p { font-size: 11px; color: #444; line-height: 1.7; }
+        .info-box code { background: #e6f4ff; padding: 1px 5px; border-radius: 4px; font-size: 10px; color: #0958d9; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .main { grid-template-columns: 1fr; }
+            .preview-panel { position: static; max-width: 420px; margin: 0 auto; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-logo">🐋</div>
+    <div>
+        <div class="header-title">虎鲸咨询 · 小红书图文工具（公网版）</div>
+        <div class="header-sub">月子中心专属 · 提交后本地工具自动处理</div>
+    </div>
+</div>
+
+<div class="main">
+
+    <!-- 左侧：操作面板 -->
+    <div class="panel">
+        <div class="section-label">素材图片</div>
+        <div class="image-section">
+            <div class="upload-box" id="cover-upload" onclick="document.getElementById('cover-input').click()">
+                <div class="upload-placeholder" id="cover-placeholder">
+                    <div class="upload-icon">🎯</div>
+                    <div class="upload-title">封面图</div>
+                    <div class="upload-desc">叠加文字用，建议人像或场景</div>
+                    <div class="cover-note">3:4 比例最佳</div>
+                </div>
+                <img class="upload-preview-img" id="cover-preview" alt="封面预览">
+                <div class="change-image-btn" onclick="event.stopPropagation();document.getElementById('cover-input').click()">更换</div>
+            </div>
+            <input type="file" id="cover-input" accept="image/*" style="display:none">
+
+            <div class="upload-box" id="display-upload" onclick="document.getElementById('display-input').click()">
+                <div class="upload-placeholder" id="display-placeholder">
+                    <div class="upload-icon">🖼</div>
+                    <div class="upload-title">展示图</div>
+                    <div class="upload-desc">月子餐 / 护理 / 环境等</div>
+                </div>
+                <img class="upload-preview-img" id="display-preview" alt="展示预览">
+                <div class="change-image-btn" onclick="event.stopPropagation();document.getElementById('display-input').click()">更换</div>
+            </div>
+            <input type="file" id="display-input" accept="image/*" style="display:none">
+        </div>
+
+        <div class="section-label">展示图调色</div>
+        <div class="filter-presets">
+            <button class="filter-btn active" data-filter="none">原图</button>
+            <button class="filter-btn" data-filter="warm">暖色调</button>
+            <button class="filter-btn" data-filter="soft">柔和奶油</button>
+            <button class="filter-btn" data-filter="fresh">清新自然</button>
+            <button class="filter-btn" data-filter="elegant">高级灰调</button>
+        </div>
+
+        <hr class="divider">
+
+        <div class="section-label">文案内容</div>
+
+        <div class="form-group">
+            <label class="form-label">标题</label>
+            <div class="form-hint">叠加在封面图上的大字，建议 4-8 字</div>
+            <input type="text" id="post-title-input" placeholder="如：28天，给妈妈一个温暖的月子假期">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">正文</label>
+            <div class="form-hint">小红书正文内容，支持多行</div>
+            <textarea id="post-content-input" placeholder="如：在阳光月子中心，我们为每一位妈妈提供专业贴心的服务..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">标签</label>
+            <div class="tag-input-wrap">
+                <input type="text" id="tags-input" placeholder="#月子中心 #坐月子 #产后修复">
+                <button class="hot-topics-btn" onclick="toggleHotTopics()">🔥 热门话题</button>
+            </div>
+            <div class="hot-topics-panel" id="hot-topics-panel">
+                <div class="hot-topics-title">推荐热门话题（点击添加）</div>
+                <div class="hot-topics-list">
+                    <span class="hot-topic-tag" onclick="addTag(this, '#月子中心')">#月子中心</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#坐月子')">#坐月子</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#新手妈妈')">#新手妈妈</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#产后修复')">#产后修复</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#宝宝护理')">#宝宝护理</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#科学育儿')">#科学育儿</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#营养月子餐')">#营养月子餐</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#月子日记')">#月子日记</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#母婴好物')">#母婴好物</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#月嫂')">#月嫂</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#新生儿')">#新生儿</span>
+                    <span class="hot-topic-tag" onclick="addTag(this, '#宝妈分享')">#宝妈分享</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 24px">
+            <label class="form-label">定位</label>
+            <input type="text" id="location-input" placeholder="如：北京市朝阳区·望京">
+        </div>
+
+        <div class="status-bar" id="status-bar"></div>
+        <button class="btn-generate" id="gen-btn" onclick="generateAll()">🎨 生成封面图</button>
+        <button class="btn-submit" id="submit-btn" onclick="submitTask()" disabled>📦 提交到草稿队列</button>
+    </div>
+
+    <!-- 右侧：预览 -->
+    <div class="preview-panel">
+        <div class="preview-label">小红书效果预览</div>
+
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+                <div class="xhs-post">
+                    <div class="post-header">
+                        <div class="post-avatar">🐋</div>
+                        <div class="post-user-info">
+                            <div class="post-username">虎鲸母婴护理</div>
+                            <div class="post-follow">+ 关注</div>
+                        </div>
+                        <div class="post-more">···</div>
+                    </div>
+                    <div class="post-carousel" id="post-carousel">
+                        <img class="post-carousel-img active" id="carousel-img-1" alt="封面">
+                        <img class="post-carousel-img" id="carousel-img-2" alt="展示">
+                        <img class="post-carousel-img" id="carousel-img-3" alt="展示">
+                        <img class="post-carousel-img" id="carousel-img-4" alt="展示">
+                        <img class="post-carousel-img" id="carousel-img-5" alt="展示">
+                        <img class="post-carousel-img" id="carousel-img-6" alt="展示">
+                        <img class="post-carousel-img" id="carousel-img-7" alt="展示">
+                        <img class="post-carousel-img" id="carousel-img-8" alt="展示">
+                        <img class="post-carousel-img" id="carousel-img-9" alt="展示">
+                        <div class="img-count-badge" id="img-count-badge">1/2</div>
+                        <div class="carousel-dots" id="carousel-dots"></div>
+                    </div>
+                    <div class="post-actions">
+                        <div class="post-title" id="post-title-display">28天，给妈妈一个温暖的月子假期</div>
+                        <div class="post-content" id="post-content-display">在阳光月子中心，我们为每一位妈妈提供专业贴心的服务...</div>
+                        <div class="post-tags" id="post-tags-display">#月子中心 #坐月子 #产后修复</div>
+                        <div class="action-row">
+                            <div class="action-item"><span class="action-icon">♡</span><span>2.3万</span></div>
+                            <div class="action-item"><span class="action-icon">💬</span><span>328</span></div>
+                            <div class="action-item save"><span class="action-icon">★</span><span>收藏</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <div class="info-box-title">ℹ️ 使用说明</div>
+            <p>
+                1. 填写标题、正文、标签<br>
+                2. 点击「生成封面图」<br>
+                3. 点击「提交到草稿队列」<br>
+                4. <strong>确保本地工具正在运行</strong>，会自动存入小红书草稿箱<br>
+                5. 登录小红书草稿箱，手动审核后发布
+            </p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ===== State =====
+let coverFile = null;
+let displayFile = null;
+let currentFilter = 'none';
+let resultDataUrl = null;  // 生成后的封面图 dataURL
+let carouselImages = [];
+let currentSlide = 0;
+
+// API 地址（部署后需要修改为实际的 vercel 域名）
+const API_BASE = window.location.origin;
+
+const filterCSS = {
+    none: '',
+    warm: 'saturate(1.3) sepia(0.15) brightness(1.05)',
+    soft: 'saturate(0.9) sepia(0.1) brightness(1.08) contrast(0.95)',
+    fresh: 'saturate(1.1) brightness(1.05) contrast(1.05)',
+    elegant: 'saturate(0.7) brightness(1.1) contrast(1.1)'
+};
+
+// ===== Upload =====
+document.getElementById('cover-input').addEventListener('change', e => {
+    if (e.target.files[0]) handleCoverUpload(e.target.files[0]);
+});
+document.getElementById('display-input').addEventListener('change', e => {
+    if (e.target.files[0]) handleDisplayUpload(e.target.files[0]);
+});
+
+function handleCoverUpload(file) {
+    coverFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('cover-preview').src = e.target.result;
+        document.getElementById('cover-preview').classList.add('show');
+        document.getElementById('cover-placeholder').classList.add('hide');
+        document.getElementById('cover-upload').classList.add('has-image');
+        updateCarousel();
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleDisplayUpload(file) {
+    displayFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const preview = document.getElementById('display-preview');
+        preview.src = e.target.result;
+        preview.classList.add('show');
+        document.getElementById('display-placeholder').classList.add('hide');
+        document.getElementById('display-upload').classList.add('has-image');
+        applyFilterToPreview();
+        updateCarousel();
+    };
+    reader.readAsDataURL(file);
+}
+
+function applyFilterToPreview() {
+    document.getElementById('display-preview').style.filter = filterCSS[currentFilter] || 'none';
+}
+
+// ===== Filter =====
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        applyFilterToPreview();
+    });
+});
+
+// ===== Hot Topics =====
+function toggleHotTopics() {
+    document.getElementById('hot-topics-panel').classList.toggle('show');
+}
+function addTag(el, tag) {
+    const input = document.getElementById('tags-input');
+    const current = input.value.trim();
+    input.value = (current && !current.endsWith(' ') && !current.endsWith('#') ? current + ' ' : current) + tag;
+    el.classList.add('selected');
+    document.getElementById('post-tags-display').textContent = input.value;
+}
+
+// ===== Real-time Preview =====
+document.getElementById('post-title-input').addEventListener('input', e => {
+    document.getElementById('post-title-display').textContent = e.target.value || '28天，给妈妈一个温暖的月子假期';
+});
+document.getElementById('post-content-input').addEventListener('input', e => {
+    document.getElementById('post-content-display').textContent = e.target.value || '在阳光月子中心，我们为每一位妈妈提供专业贴心的服务...';
+});
+document.getElementById('tags-input').addEventListener('input', e => {
+    document.getElementById('post-tags-display').textContent = e.target.value || '#月子中心 #坐月子 #产后修复';
+});
+
+// ===== Carousel =====
+function updateCarousel() {
+    carouselImages = [];
+    const coverSrc = document.getElementById('cover-preview').src;
+    const displaySrc = document.getElementById('display-preview').src;
+    if (coverSrc && !coverSrc.includes(window.location.host) || coverSrc !== window.location.href)
+        carouselImages.push(coverSrc);
+    if (displaySrc && !displaySrc.includes(window.location.host) || displaySrc !== window.location.href)
+        carouselImages.push(displaySrc);
+
+    const total = carouselImages.length;
+    for (let i = 1; i <= 9; i++) {
+        const img = document.getElementById('carousel-img-' + i);
+        img.src = i <= total ? carouselImages[i - 1] : '';
+        img.classList.toggle('active', i === 1 && total > 0);
+    }
+    if (total > 1) {
+        document.getElementById('img-count-badge').textContent = `1/${total}`;
+        document.getElementById('img-count-badge').classList.add('show');
+    } else {
+        document.getElementById('img-count-badge').classList.remove('show');
+    }
+    updateDots(total);
+}
+
+function updateDots(count) {
+    const container = document.getElementById('carousel-dots');
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+        container.appendChild(dot);
+    }
+}
+
+document.getElementById('post-carousel').addEventListener('click', () => {
+    if (carouselImages.length <= 1) return;
+    document.getElementById('carousel-img-' + (currentSlide + 1)).classList.remove('active');
+    currentSlide = (currentSlide + 1) % carouselImages.length;
+    document.getElementById('carousel-img-' + (currentSlide + 1)).classList.add('active');
+    document.getElementById('img-count-badge').textContent = `${currentSlide + 1}/${carouselImages.length}`;
+    document.querySelectorAll('.carousel-dot').forEach((dot, i) => dot.classList.toggle('active', i === currentSlide));
+});
+
+// ===== Generate =====
+function setStatus(msg, type) {
+    const bar = document.getElementById('status-bar');
+    bar.textContent = msg;
+    bar.className = 'status-bar show ' + type;
+}
+
+function generateAll() {
+    if (!coverFile) { setStatus('请上传封面图', 'error'); return; }
+    const title = document.getElementById('post-title-input').value.trim();
+    setStatus('正在生成封面图...', 'loading');
+    document.getElementById('gen-btn').disabled = true;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const W = 1080, H = 1440;
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d');
+
+            // 背景图居中裁切
+            const scale = Math.max(W / img.width, H / img.height);
+            ctx.drawImage(img, (img.width - W/scale) / 2, (img.height - H/scale) / 2, W/scale, H/scale, 0, 0, W, H);
+
+            // 底部渐变蒙版
+            const bottomGrad = ctx.createLinearGradient(0, H * 0.25, 0, H);
+            bottomGrad.addColorStop(0, 'rgba(0,0,0,0)');
+            bottomGrad.addColorStop(0.4, 'rgba(0,0,0,0.3)');
+            bottomGrad.addColorStop(1, 'rgba(0,0,0,0.8)');
+            ctx.fillStyle = bottomGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // 顶部压暗
+            const topGrad = ctx.createLinearGradient(0, 0, 0, H * 0.15);
+            topGrad.addColorStop(0, 'rgba(0,0,0,0.25)');
+            topGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = topGrad;
+            ctx.fillRect(0, 0, W, H * 0.15);
+
+            // 主标题
+            if (title) {
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                let size = title.length <= 4 ? 130 : title.length <= 8 ? 100 : title.length <= 12 ? 80 : 65;
+                ctx.font = `900 ${size}px 'PingFang SC', 'STHeiti SC', 'Helvetica Neue', sans-serif`;
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.lineWidth = 6;
+                ctx.lineJoin = 'round';
+
+                let lines = title.length > 6 ? [title.slice(0, Math.ceil(title.length/2)), title.slice(Math.ceil(title.length/2))] : [title];
+                const lh = size * 1.25;
+                const startY = H * 0.38 - (lines.length * lh) / 2 + lh * 0.8;
+                lines.forEach((line, i) => {
+                    ctx.strokeText(line, W / 2, startY + i * lh);
+                    ctx.fillText(line, W / 2, startY + i * lh);
+                });
+            }
+
+            // 装饰线
+            ctx.fillStyle = 'rgba(255,215,160,0.8)';
+            ctx.fillRect(W * 0.38, H * 0.48, W * 0.24, 2);
+
+            // 品牌水印
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = '400 32px "PingFang SC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('虎鲸母婴护理', W / 2, H - 240);
+
+            // 分割线
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.fillRect(W * 0.35, H - 200, W * 0.3, 1);
+
+            // 底部圆点
+            const dotCount = 3, dotR = 5, dotGap = 24;
+            let dotX = (W - (dotCount * dotR * 2 + (dotCount-1) * dotGap)) / 2 + dotR;
+            for (let i = 0; i < dotCount; i++) {
+                ctx.beginPath();
+                ctx.arc(dotX, H - 120, dotR, 0, Math.PI * 2);
+                ctx.fillStyle = i === 0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)';
+                ctx.fill();
+                dotX += dotR * 2 + dotGap;
+            }
+
+            resultDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+
+            // 更新预览
+            document.getElementById('carousel-img-1').src = resultDataUrl;
+            document.getElementById('carousel-img-1').classList.add('active');
+            carouselImages[0] = resultDataUrl;
+
+            setStatus('封面图生成成功 ✅', 'success');
+            document.getElementById('gen-btn').disabled = false;
+            document.getElementById('submit-btn').disabled = false;
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(coverFile);
+}
+
+// ===== Submit Task =====
+async function submitTask() {
+    const title = document.getElementById('post-title-input').value.trim();
+    const content = document.getElementById('post-content-input').value.trim();
+    const tags = document.getElementById('tags-input').value.trim();
+    const location = document.getElementById('location-input').value.trim();
+
+    if (!title) { setStatus('请填写标题', 'error'); return; }
+    if (!content) { setStatus('请填写正文', 'error'); return; }
+    if (!resultDataUrl) { setStatus('请先生成封面图', 'error'); return; }
+
+    setStatus('正在提交任务，请稍候...', 'loading');
+    document.getElementById('submit-btn').disabled = true;
+
+    try {
+        // 将封面图转为 base64（压缩后）
+        const cover_base64 = await compressImage(resultDataUrl, 800, 0.7);
+
+        const res = await fetch(`${API_BASE}/api/submit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, content, tags, location, cover_base64 })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            setStatus(`✅ 提交成功！任务ID: ${data.task_id}，请确保本地工具正在运行`, 'success');
+        } else {
+            setStatus('❌ 提交失败: ' + (data.error || '未知错误'), 'error');
+            document.getElementById('submit-btn').disabled = false;
+        }
+    } catch (e) {
+        setStatus('❌ 网络错误: ' + e.message, 'error');
+        document.getElementById('submit-btn').disabled = false;
+    }
+}
+
+// 压缩图片为 base64（避免超出请求体大小限制）
+function compressImage(dataUrl, maxWidth, quality) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ratio = maxWidth / Math.max(img.width, img.height);
+            canvas.width = img.width * ratio;
+            canvas.height = img.height * ratio;
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = dataUrl;
+    });
+}
+</script>
+</body>
+</html>
