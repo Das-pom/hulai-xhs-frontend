@@ -4,7 +4,7 @@
  * POST /api/done { task_id: "xxx" }
  */
 
-const GITHUB_TOKEN = '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';
+const GITHUB_TOKEN = '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';
 const GIST_ID = 'd0d605bb62fb629db1989b35bbcc8c19';
 
 async function getGist() {
