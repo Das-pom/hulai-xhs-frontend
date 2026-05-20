@@ -1,6 +1,6 @@
 /**
  * api/done.js
- * 标记任务已完成
+ * Netlify Function: 标记任务已完成
  * POST /api/done { task_id: "xxx" }
  */
 
@@ -36,28 +36,31 @@ async function updateGist(content) {
   return res.json();
 }
 
-module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+exports.handler = async (event, context) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json'
+  };
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: '只支持 POST' });
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: '只支持 POST' }) };
   }
 
   if (!GITHUB_TOKEN || !GIST_ID) {
-    return res.status(500).json({ error: 'GitHub Gist 未配置' });
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'GitHub Gist 未配置' }) };
   }
 
   try {
-    const { task_id, status, message } = req.body;
+    const { task_id, status, message } = JSON.parse(event.body || '{}');
 
     if (!task_id) {
-      return res.status(400).json({ error: '缺少 task_id' });
+      return { statusCode: 400, headers, body: JSON.stringify({ error: '缺少 task_id' }) };
     }
 
     const gist = await getGist();
@@ -69,7 +72,7 @@ module.exports = async (req, res) => {
     // 找到任务并更新
     const task = tasks.find(t => t.id === task_id);
     if (!task) {
-      return res.status(404).json({ error: `任务 ${task_id} 不存在` });
+      return { statusCode: 404, headers, body: JSON.stringify({ error: `任务 ${task_id} 不存在` }) };
     }
 
     task.status = status || 'done';
@@ -80,10 +83,14 @@ module.exports = async (req, res) => {
 
     console.log(`✅ 任务 ${task_id} 已标记为 ${task.status}`);
 
-    return res.status(200).json({ success: true, task_id, status: task.status });
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ success: true, task_id, status: task.status })
+    };
 
   } catch (error) {
     console.error('更新任务失败:', error);
-    return res.status(500).json({ error: error.message });
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
   }
 };
