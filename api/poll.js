@@ -4,8 +4,8 @@
  * GET /api/poll?limit=5
  */
 
-const GITHUB_TOKEN = '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';
-const GIST_ID = 'd0d605bb62fb629db1989b35bbcc8c19';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GIST_ID = process.env.GIST_ID || 'd0d605bb62fb629db1989b35bbcc8c19';
 
 async function getGist() {
   const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
