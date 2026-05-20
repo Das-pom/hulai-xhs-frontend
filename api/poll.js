@@ -1,6 +1,6 @@
 /**
  * api/poll.js
- * 返回待处理任务（供本地后端轮询）
+ * Netlify Function: 返回待处理任务（供本地后端轮询）
  * GET /api/poll?limit=5
  */
 
@@ -18,21 +18,24 @@ async function getGist() {
   return res.json();
 }
 
-module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+exports.handler = async (event, context) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json'
+  };
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
   }
 
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: '只支持 GET' });
+  if (event.httpMethod !== 'GET') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: '只支持 GET' }) };
   }
 
   if (!GITHUB_TOKEN || !GIST_ID) {
-    return res.status(500).json({ error: 'GitHub Gist 未配置' });
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'GitHub Gist 未配置' }) };
   }
 
   try {
@@ -44,10 +47,14 @@ module.exports = async (req, res) => {
       tasks = JSON.parse(file.content);
     }
 
+    // 解析查询参数
+    const urlParams = new URLSearchParams(event.queryStringParameters || {});
+    const limit = parseInt(urlParams.get('limit')) || 10;
+
     // 只返回 pending 状态的任务
     const pending = tasks
       .filter(t => t.status === 'pending')
-      .slice(0, parseInt(req.query.limit) || 10)
+      .slice(0, limit)
       .map(t => ({
         id: t.id,
         title: t.title,
@@ -59,13 +66,17 @@ module.exports = async (req, res) => {
         created_at: t.created_at
       }));
 
-    return res.status(200).json({
-      pending_count: pending.length,
-      tasks: pending
-    });
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        pending_count: pending.length,
+        tasks: pending
+      })
+    };
 
   } catch (error) {
     console.error('轮询失败:', error);
-    return res.status(500).json({ error: error.message });
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
   }
 };
