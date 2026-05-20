@@ -1,6 +1,6 @@
 /**
  * api/submit.js
- * 接收小红书任务，存入 GitHub Gist
+ * Netlify Function: 接收小红书任务，存入 GitHub Gist
  */
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -38,31 +38,41 @@ async function updateGist(content) {
   return res.json();
 }
 
-module.exports = async (req, res) => {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+exports.handler = async (event, context) => {
+  // CORS headers
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json'
+  };
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  // Handle CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: '只支持 POST' });
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: '只支持 POST' }) };
   }
 
   if (!GITHUB_TOKEN || !GIST_ID) {
-    return res.status(500).json({
-      error: 'GitHub Gist 未配置（环境变量 GITHUB_TOKEN 或 GIST_ID 缺失）'
-    });
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: 'GitHub Gist 未配置' })
+    };
   }
 
   try {
-    const { title, content, tags, location, cover_base64, display_base64 } = req.body;
+    const { title, content, tags, location, cover_base64, display_base64 } = JSON.parse(event.body || '{}');
 
     if (!title || !content) {
-      return res.status(400).json({ error: '标题和正文不能为空' });
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: '标题和正文不能为空' })
+      };
     }
 
     // 生成任务ID
@@ -77,7 +87,6 @@ module.exports = async (req, res) => {
         tasks = JSON.parse(file.content);
       }
     } catch (e) {
-      // Gist 为空或文件不存在，从头开始
       tasks = [];
     }
 
@@ -88,7 +97,6 @@ module.exports = async (req, res) => {
       content: String(content).trim(),
       tags: String(tags || '').trim(),
       location: String(location || '').trim(),
-      // base64 图片数据（可选，体积较大）
       cover_base64: cover_base64 || '',
       display_base64: display_base64 || '',
       status: 'pending',
@@ -97,20 +105,26 @@ module.exports = async (req, res) => {
     };
 
     tasks.push(task);
-
-    // 更新 Gist
     await updateGist(tasks);
 
-    console.log(`✅ 新任务已存储: ${taskId} - ${title}`);
+    console.log(`✅ 新任务已存储: ${taskId}`);
 
-    return res.status(200).json({
-      success: true,
-      task_id: taskId,
-      message: '任务已提交，请等待本地工具处理'
-    });
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        task_id: taskId,
+        message: '任务已提交，请等待本地工具处理'
+      })
+    };
 
   } catch (error) {
     console.error('提交失败:', error);
-    return res.status(500).json({ error: error.message });
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: error.message })
+    };
   }
 };
